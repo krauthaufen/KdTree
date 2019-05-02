@@ -25,6 +25,26 @@ static int sign(double a) {
 #define imin(a,b) ((a) < (b) ? (a) : (b))
 #define imax(a,b) ((a) > (b) ? (a) : (b))
 
+#define timed(name, f, u, block) \
+	{ \
+	std::cout << (name) << ": "; \
+	LARGE_INTEGER frequency; \
+	if (::QueryPerformanceFrequency(&frequency) == FALSE) throw "foo"; \
+	LARGE_INTEGER start; \
+	if (::QueryPerformanceCounter(&start) == FALSE) throw "foo"; \
+	block \
+	LARGE_INTEGER end; \
+	if (::QueryPerformanceCounter(&end) == FALSE) throw "foo"; \
+	double interval = static_cast<double>(end.QuadPart - start.QuadPart) / frequency.QuadPart; \
+	std::cout<< interval * (f) << (u) << "s" << std::endl; }
+
+//#define timed(name, block) { \
+//	block \
+//	std::cout << name << " (" << "s)" << std::endl;\
+//	};
+//
+
+
 static int PrevPowerOfTwo(int x)
 {
 	if (x <= 0) return 0;
@@ -358,46 +378,32 @@ V3d* readV3ds(const char* file, int* cnt) {
 
 int main()
 {
-	LARGE_INTEGER frequency;
-	if (::QueryPerformanceFrequency(&frequency) == FALSE)
-		throw "foo";
-
-
-
 	auto dataCount = 0;
 	auto queryCount = 0;
 	auto data = readV3ds("C:\\Users\\Schorsch\\Desktop\\grid.bin", &dataCount);
 	auto query = readV3ds("C:\\Users\\Schorsch\\Desktop\\line.bin", &queryCount);
 
-	LARGE_INTEGER start;
-	if (::QueryPerformanceCounter(&start) == FALSE)
-		throw "foo";
+	PointRKdTreeD* a;
+	timed("build", 1.0, "", {
+		a = new PointRKdTreeD(dataCount, data, 1E-6);
+	})
 
-	auto a = new PointRKdTreeD(dataCount, data, 1E-6);
-	
-	LARGE_INTEGER end;
-	if (::QueryPerformanceCounter(&end) == FALSE)
-		throw "foo";
+		/*auto a = new PointRKdTreeD(dataCount, data, 1E-6);
 
-	double interval = static_cast<double>(end.QuadPart - start.QuadPart) / frequency.QuadPart;
-	std::cout << "built tree (" <<  interval << "s)" << std::endl;
-
+		LARGE_INTEGER end;
+		if (::QueryPerformanceCounter(&end) == FALSE)
+			throw "foo";*/
+			/*
+				double interval = static_cast<double>(end.QuadPart - start.QuadPart) / frequency.QuadPart;
+				std::cout << "built tree (" <<  interval << "s)" << std::endl; */
 
 	for (int q = 0; q < 50; q++) {
-		if (::QueryPerformanceCounter(&start) == FALSE)
-			throw "foo";
-
-		for (int i = 0; i < queryCount; i++) {
-			auto q = ClosestToPointQuery(query[i]);
-			a->GetClosest(q, 0);
-			//std::cout << i << ": " << q.ClosestIndex << " (" << q.ClosestDist << ")" << std::endl;
-		}
-
-		if (::QueryPerformanceCounter(&end) == FALSE)
-			throw "foo";
-
-		interval = static_cast<double>(end.QuadPart - start.QuadPart) / frequency.QuadPart;
-		std::cout << "query  (" << 1000000.0 * interval / (double)queryCount << "us)" << std::endl;
+		timed("query", 1000000.0 / queryCount, "u", {
+			for (int i = 0; i < queryCount; i++) {
+				auto q = ClosestToPointQuery(query[i]);
+				a->GetClosest(q, 0);
+			}
+		});
 	}
 
 	return 0; 
