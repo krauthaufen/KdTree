@@ -334,17 +334,20 @@ public:
 V3d* readV3ds(const char* file, int* cnt) {
 	FILE* p_file = NULL;
 	fopen_s(&p_file, file, "rb");
+	if (!p_file) return nullptr;
+
 	fseek(p_file, 0, SEEK_END);
-	int size = ftell(p_file);
+	auto size = (size_t)ftell(p_file);
 	fseek(p_file, 0, SEEK_SET);
 
-	*cnt = size / sizeof(V3d);
-	auto data = new V3d[*cnt];
+	*cnt = (int) (size / sizeof(V3d));
+	auto data = new V3d[size / sizeof(V3d)];
 	size_t r;
 	char* dst = (char*)(data);
-	long rem = size;
+	auto rem = size;
 	while (rem > 0) {
-		r = fread(dst, 1, rem, p_file);
+		r = fread_s(dst, rem, (size_t)1, rem, p_file);
+		if (!r) return nullptr;
 		rem -= r;
 		dst = dst + r;
 	}
@@ -377,7 +380,7 @@ int main()
 		throw "foo";
 
 	double interval = static_cast<double>(end.QuadPart - start.QuadPart) / frequency.QuadPart;
-	std::cout << "built tree (" << interval << "s)" << std::endl;
+	std::cout << "built tree (" <<  interval << "s)" << std::endl;
 
 
 	for (int q = 0; q < 50; q++) {
@@ -394,7 +397,7 @@ int main()
 			throw "foo";
 
 		interval = static_cast<double>(end.QuadPart - start.QuadPart) / frequency.QuadPart;
-		std::cout << "query  (" << interval << "s)" << std::endl;
+		std::cout << "query  (" << 1000000.0 * interval / (double)queryCount << "us)" << std::endl;
 	}
 
 	return 0; 
